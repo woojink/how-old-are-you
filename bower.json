@@ -1,0 +1,19 @@
+{
+  "name": "how-old-are-you",
+  "authors": [
+    "Woojin Kim"
+  ],
+  "description": "Simple single serving website to show you your exact birthday in decimals.",
+  "moduleType": [],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "moment-timezone": "~0.5.0"
+  }
+}

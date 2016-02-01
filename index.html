@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>How Old Are You?</title>
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://cdnjs.cloudflare.com/ajax/libs/select2/4.0.1/css/select2.min.css" rel="stylesheet">
+    <link href="style/main.css" rel="stylesheet">
+
+    <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/select2/4.0.1/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.1/moment.min.js"></script>
+    <script src="bower_components/moment-timezone/builds/moment-timezone-with-data.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="date-select">
+        <p class="birthday">Your birthday?</p>
+
+        <div class="dropdowns">
+          <select class="dropdown dropdown-1" id="year">
+            <option>Year</option>
+          </select>
+          <select class="dropdown dropdown-1" id="month" disabled>
+            <option>Month</option>
+          </select>
+          <select class="dropdown dropdown-1" id="day" disabled>
+            <option>Day</option>
+          </select>
+          &nbsp;
+          <select class="dropdown dropdown-2" id="hour">
+            <option>Hour</option>
+          </select>
+          <select class="dropdown dropdown-2" id="minute">
+            <option>Minute</option>
+          </select>
+          <select class="dropdown dropdown-2" id="ampm">
+            <option>AM</option>
+            <option>PM</option>
+          </select>
+          &nbsp;
+          <select class="dropdown dropdown-3" id="tz">
+            <option>Time zone</option>
+          </select>
+          <br>
+          <button id="go-button">Go</button>
+        </div>
+      </div>
+
+      <p class="age-sentence">You are<br><span id="age"></span><br>years old.</p>
+    </div>
+
+    <script>
+      $.getJSON("bower_components/moment-timezone/data/packed/latest.json", function(d){
+        moment.tz.add(d);
+      });
+      $(".dropdown").select2();
+      
+      var current_year = moment().year();
+      var time_zones = moment.tz.names();
+
+      // Zero pad date related numbers
+      function zero_pad(num) {
+        if (num<10) {
+          result = "0" + num.toString();
+        }
+        else {
+         result = num.toString();
+       }
+        return result;
+      }
+
+      //--------------------------------------------------------------------------------
+      // Date/time picker
+      //
+      // Since the number of days are leap year sensitive, the dropdown is
+      // populated only after knowing the year and the month.
+
+      // Year
+      for (var i=current_year; i>=1900; i--){
+        $('#year').append('<option class="selector-years">'+i+'</option>');
+      }
+
+      // Month
+      $('#year').change(function(){
+        $('.selector-days').remove();
+        if (!isNaN($('#year option:selected').text())) {
+          $('#month').prop("disabled", false);
+
+          if ($('.selector-months').length == 0) {
+            for (var i=1; i<=12; i++){
+              i = zero_pad(i);
+              $('#month').append('<option class="selector-months">'+i+'</option>');
+            }
+          }
+          else {
+            $('#month').trigger('change');
+          }
+        }
+        else {
+          $('#month').prop("disabled", true);
+        }
+      })
+
+      // Day
+      $('#month').change(function(){
+        if (!isNaN($('#month option:selected').text())) {
+          $('.selector-days').remove();
+          $('#day').prop("disabled", false);
+
+          year = $('#year option:selected').text();
+          month = $('#month option:selected').text();
+          str = year+"-"+month+"-"+"01";
+          last_date = moment(str).endOf('month').date();
+
+          for (var i=1; i<=last_date; i++){
+            i = zero_pad(i);  
+            $('#day').append('<option class="selector-days">'+i+'</option>');
+          }
+        }
+        else {
+          $('#day').val(1).attr('selected','selected');
+          $('#select2-day-container').text("Day");
+          $('.selector-days').remove();
+          $('#day').prop("disabled", true);
+        }
+      })
+
+      // Hour
+      for (var i=1; i<=12; i++){
+        i = zero_pad(i);
+        $('#hour').append("<option>"+i+"</option>")
+      }
+      // Minute
+      for (var i=0; i<=59; i++){
+        i = zero_pad(i);
+        $('#minute').append("<option>"+i+"</option>");
+      }
+      // Time Zone
+      for (var i=0; i<time_zones.length; i++){
+        str = time_zones[i].replace(/_/g, " ");
+        $('#tz').append("<option value="+time_zones[i]+">"+str+"</option>");
+      }
+
+      // Submit
+      $('#go-button').click(function(){
+        year = $('#year option:selected').text();
+        month = $('#month option:selected').text();
+        day = $('#day option:selected').text();
+
+        hour = $('#hour option:selected').text();
+        minute = $('#minute option:selected').text();
+        ampm = $('#ampm option:selected').text();
+        if (ampm == "PM") {
+          hour = +hour + 12;
+        }
+
+        tz = $('#tz option:selected').val();
+
+        if (isNaN(year)||isNaN(month)||isNaN(day)) {
+          alert("Please fill in the date completely")
+        }
+        else {
+          dt_str = year+month+day+"T"+hour+minute;
+          
+          var birthday = moment.tz(dt_str, tz);
+
+          $(".date-select").css('display','none')
+
+          console.log(dt_str)
+          console.log(birthday.format())
+
+          update_birthday(birthday);
+          $(".age-sentence").css('display','table-cell')
+        }
+      })
+
+      //--------------------------------------------------------------------------------
+      // Time difference calculator
+      var ms_to_year = moment.duration(1,'years')/moment.duration(1);
+      
+      function update_birthday(birthday) {
+        var age = moment().diff(birthday) / ms_to_year;
+        $("#age").text(age.toFixed(9));
+        setTimeout(update_birthday, 10, birthday);
+      }
+      
+      function update_height() {
+        var viewportHeight = $(window).height();
+        $(".main").css('height', viewportHeight*.7);
+        setTimeout(update_height, 10);
+      }
+
+      $(document).ready(update_height())
+    </script>
+  </body>
+</html>
